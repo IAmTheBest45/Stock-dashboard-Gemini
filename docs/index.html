@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Portfolio Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .recommendation-buy {
+            color: #10B981; /* Green */
+        }
+        .recommendation-sell {
+            color: #EF4444; /* Red */
+        }
+        .recommendation-hold {
+            color: #3B82F6; /* Blue */
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+            padding: 1.5rem; /* p-6 */
+            margin-bottom: 1.5rem; /* mb-6 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4 sm:p-6 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl font-bold text-center text-gray-900 mb-4">Stock Portfolio Dashboard</h1>
+        <p class="text-center text-gray-600 mb-8">Last Updated: 2025-06-28 13:32:13 (Local Time)</p>
+
+        <div class="grid grid-cols-1 gap-6">
+    
+            <div class="card">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-2">AAPL</h2>
+                <div class="mb-4 text-lg">
+                    <p><span class="font-medium">Current Price:</span> $201.08</p>
+                    <p><span class="font-medium">Unrealized P/L:</span> <span class="text-green-600">17.94%</span></p>
+                    <p><span class="font-medium">Calculated Take Profit:</span> $221.19</p>
+                    <p><span class="font-medium">Calculated Stop Loss:</span> $156.86</p>
+                </div>
+                
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="text-xl font-semibold mb-2">AI Recommendation:</h3>
+                    <p class="text-xl font-bold text-gray-500 mb-2">N/A</p>
+                    <p class="text-gray-700 mb-2"><span class="font-medium">Justification:</span> No analysis provided.</p>
+                    <p class="text-gray-700"><span class="font-medium">Suggested Price:</span> N/A</p>
+                </div>
+            </div>
+        
+            <div class="card">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-2">MSFT</h2>
+                <div class="mb-4 text-lg">
+                    <p><span class="font-medium">Current Price:</span> $495.94</p>
+                    <p><span class="font-medium">Unrealized P/L:</span> <span class="text-green-600">23.99%</span></p>
+                    <p><span class="font-medium">Calculated Take Profit:</span> $545.53</p>
+                    <p><span class="font-medium">Calculated Stop Loss:</span> $368.00</p>
+                </div>
+                
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="text-xl font-semibold mb-2">AI Recommendation:</h3>
+                    <p class="text-xl font-bold text-gray-500 mb-2">N/A</p>
+                    <p class="text-gray-700 mb-2"><span class="font-medium">Justification:</span> No analysis provided.</p>
+                    <p class="text-gray-700"><span class="font-medium">Suggested Price:</span> N/A</p>
+                </div>
+            </div>
+        
+            <div class="card">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-2">GOOG</h2>
+                <div class="mb-4 text-lg">
+                    <p><span class="font-medium">Current Price:</span> $178.27</p>
+                    <p><span class="font-medium">Unrealized P/L:</span> <span class="text-green-600">18.85%</span></p>
+                    <p><span class="font-medium">Calculated Take Profit:</span> $196.10</p>
+                    <p><span class="font-medium">Calculated Stop Loss:</span> $138.00</p>
+                </div>
+                
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="text-xl font-semibold mb-2">AI Recommendation:</h3>
+                    <p class="text-xl font-bold text-gray-500 mb-2">N/A</p>
+                    <p class="text-gray-700 mb-2"><span class="font-medium">Justification:</span> No analysis provided.</p>
+                    <p class="text-gray-700"><span class="font-medium">Suggested Price:</span> N/A</p>
+                </div>
+            </div>
+        
+            <div class="card">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-2">RELIANCE.NS</h2>
+                <div class="mb-4 text-lg">
+                    <p><span class="font-medium">Current Price:</span> $1515.40</p>
+                    <p><span class="font-medium">Unrealized P/L:</span> <span class="text-red-600">-45.88%</span></p>
+                    <p><span class="font-medium">Calculated Take Profit:</span> $3080.00</p>
+                    <p><span class="font-medium">Calculated Stop Loss:</span> $2576.00</p>
+                </div>
+                
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="text-xl font-semibold mb-2">AI Recommendation:</h3>
+                    <p class="text-xl font-bold text-gray-500 mb-2">N/A</p>
+                    <p class="text-gray-700 mb-2"><span class="font-medium">Justification:</span> No analysis provided.</p>
+                    <p class="text-gray-700"><span class="font-medium">Suggested Price:</span> N/A</p>
+                </div>
+            </div>
+        
+            <div class="card">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-2">INFY.NS</h2>
+                <div class="mb-4 text-lg">
+                    <p><span class="font-medium">Current Price:</span> $1608.00</p>
+                    <p><span class="font-medium">Unrealized P/L:</span> <span class="text-green-600">7.20%</span></p>
+                    <p><span class="font-medium">Calculated Take Profit:</span> $1768.80</p>
+                    <p><span class="font-medium">Calculated Stop Loss:</span> $1380.00</p>
+                </div>
+                
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="text-xl font-semibold mb-2">AI Recommendation:</h3>
+                    <p class="text-xl font-bold text-gray-500 mb-2">N/A</p>
+                    <p class="text-gray-700 mb-2"><span class="font-medium">Justification:</span> No analysis provided.</p>
+                    <p class="text-gray-700"><span class="font-medium">Suggested Price:</span> N/A</p>
+                </div>
+            </div>
+        
+        </div>
+        <p class="text-center text-gray-500 text-sm mt-8">
+            Disclaimer: AI recommendations are for informational purposes only and do not constitute financial advice. Always conduct your own research and consult with a financial professional before making investment decisions.
+        </p>
+    </div>
+</body>
+</html>
+    
