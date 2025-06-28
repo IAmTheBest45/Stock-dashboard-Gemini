@@ -4,24 +4,21 @@ from ollama import Client
 import json
 import os
 from datetime import datetime, timedelta
+import re # Import the regex module
 
 # --- Configuration ---
 OLLAMA_HOST = 'http://localhost:11434'  # Default Ollama host
 LLM_MODEL = 'llama3'                   # Model to use (ensure it's downloaded: ollama pull llama3)
 PORTFOLIO_FILE = 'portfolio.csv'       # Or 'portfolio.json' if you chose that format
 HISTORICAL_DAYS = 90                   # Number of days of historical data for LLM context and technicals
-DASHBOARD_OUTPUT_DIR = 'docs'          # Directory where the HTML dashboard will be generated
 
 # Percentage targets for calculated entry/sell prices (adjust as per your strategy and risk tolerance)
-# For a BUY signal (when considering adding to existing or new position):
-TAKE_PROFIT_PERCENT_BUY = 7.0          # e.g., 7% profit target from current price
-STOP_LOSS_PERCENT_BUY = 3.0            # e.g., 3% stop loss from current price for a new buy
+TAKE_PROFIT_PERCENT_BUY = 7.0
+STOP_LOSS_PERCENT_BUY = 3.0
+TAKE_PROFIT_PERCENT_SELL = 10.0
+STOP_LOSS_FROM_AVG_PRICE_PERCENT = 8.0
 
-# For a SELL signal (for an existing holding):
-# Target profit percentage if the stock is currently in profit
-TAKE_PROFIT_PERCENT_SELL = 10.0        # e.g., 10% profit target from current price if already up
-# Stop-loss percentage relative to your AVERAGE PURCHASE PRICE (to limit overall loss on the holding)
-STOP_LOSS_FROM_AVG_PRICE_PERCENT = 8.0 # e.g., Sell if price drops 8% below your average buy price
+DASHBOARD_OUTPUT_DIR = 'docs' # Directory where the HTML dashboard will be generated
 
 # --- Helper Functions ---
 
@@ -32,7 +29,7 @@ def load_portfolio(file_path):
             return pd.read_csv(file_path)
         except FileNotFoundError:
             print(f"Error: Portfolio file '{file_path}' not found. Please create it.")
-            return pd.DataFrame() # Return empty DataFrame to allow graceful exit
+            return pd.DataFrame()
         except pd.errors.EmptyDataError:
             print(f"Error: Portfolio file '{file_path}' is empty. Please add data.")
             return pd.DataFrame()
@@ -212,11 +209,63 @@ Here is the data for the stock:
     except Exception as e:
         return f"Error communicating with local LLM for {ticker}: {e}. Ensure Ollama is running and '{LLM_MODEL}' model is downloaded."
 
+def parse_llm_analysis(llm_analysis_text):
+    """
+    Parses the raw LLM analysis text to extract recommendation, justification, and suggested price.
+    Uses regex for more robust parsing.
+    """
+    recommendation = "N/A"
+    justification = "No analysis provided."
+    suggested_price = "N/A"
+
+    # --- Debugging: Print raw LLM output ---
+    print(f"\n--- Raw LLM Response for Parsing ---\n{llm_analysis_text}\n--- End Raw LLM Response ---\n")
+    # --- End Debugging ---
+
+    # Regex to find Recommendation
+    # Looks for "Recommendation:" followed by BUY, SELL, HOLD (case-insensitive)
+    rec_match = re.search(r'(?:Recommendation:|1\.\s*Recommendation:)\s*(BUY|SELL|HOLD|N\/A)(?![a-zA-Z])', llm_analysis_text, re.IGNORECASE)
+    if rec_match:
+        recommendation = rec_match.group(1).upper() # Ensure consistent casing
+
+    # Regex to find Justification
+    # Captures text after "Justification:" up to the next numbered point or "Suggested Price" or end of string
+    just_match = re.search(r'(?:Justification:|2\.\s*Justification:)\s*(.*?)(?=\n(?:3\.\s*If BUY or SELL|Suggested Price|Suggested Entry Price|Suggested Exit Price|\Z))', llm_analysis_text, re.IGNORECASE | re.DOTALL)
+    if just_match:
+        justification = just_match.group(1).strip()
+        # Clean up any trailing "---" or "```" if LLM generates markdown
+        justification = re.sub(r'```.*|---.*', '', justification, flags=re.DOTALL).strip()
+
+
+    # Regex to find Suggested Price/Range
+    # Looks for various forms of suggested price headers
+    price_match = re.search(r'(?:Suggested (?:Entry|Exit) Price|Suggested Price|3\.\s*If BUY or SELL, provide a specific Suggested Entry Price or Suggested Exit Price\/Range):?\s*([^\n]+)', llm_analysis_text, re.IGNORECASE)
+    if price_match:
+        suggested_price = price_match.group(1).strip()
+        # Clean up markdown if LLM includes it
+        suggested_price = suggested_price.replace('**', '')
+
+
+    # Fallback if specific sections aren't found, try to infer or assign whole text to justification
+    if recommendation == "N/A" and justification == "No analysis provided." and llm_analysis_text.strip():
+        # If no clear recommendation/justification headings were found,
+        # but there is content, assume the whole response is the justification
+        justification = llm_analysis_text.strip()
+        # Try to infer recommendation from the justification
+        if re.search(r'\b(?:buy|accumulate|add)\b', justification, re.IGNORECASE) and not re.search(r'\b(?:not buy|avoid)\b', justification, re.IGNORECASE):
+            recommendation = "BUY"
+        elif re.search(r'\b(?:sell|reduce|exit)\b', justification, re.IGNORECASE) and not re.search(r'\b(?:not sell|hold)\b', justification, re.IGNORECASE):
+            recommendation = "SELL"
+        elif re.search(r'\b(?:hold|monitor|neutral)\b', justification, re.IGNORECASE):
+            recommendation = "HOLD"
+
+    return recommendation, justification, suggested_price
+
+
 def generate_html_dashboard(results):
     """Generates the HTML content for the dashboard."""
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Tailwind CSS CDN
     html_content = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -261,26 +310,10 @@ def generate_html_dashboard(results):
         ticker = result['Ticker']
         current_price = result['Current Price']
         unrealized_pl_percent = result['Unrealized P/L (%)']
-        llm_analysis = result['LLM Analysis']
+        llm_analysis_raw = result['LLM Analysis'] # Get the raw LLM response
+
+        recommendation, justification, suggested_price = parse_llm_analysis(llm_analysis_raw) # Parse it here
         calc_targets = result['Calculated Targets']
-
-        recommendation = "N/A"
-        justification = "No analysis provided."
-        suggested_price = "N/A"
-
-        # Attempt to parse LLM analysis for structured display
-        llm_lines = llm_analysis.split('\n')
-        for line in llm_lines:
-            line_lower = line.lower()
-            if line_lower.startswith('1. recommendation:'):
-                recommendation = line.replace('1. Recommendation:', '').strip()
-            elif line_lower.startswith('2. justification:'):
-                justification = line.replace('2. Justification:', '').strip()
-            elif line_lower.startswith('3. if buy or sell, provide a specific suggested entry price or suggested exit price/range:'):
-                suggested_price = line.replace('3. If BUY or SELL, provide a specific Suggested Entry Price or Suggested Exit Price/Range:', '').strip()
-            elif line_lower.startswith('suggested entry price:') or line_lower.startswith('suggested exit price:'):
-                # Fallback for LLM sometimes just outputting the price directly
-                suggested_price = line.strip()
 
         # Determine color for recommendation
         rec_class = ""
@@ -291,14 +324,26 @@ def generate_html_dashboard(results):
         elif "hold" in recommendation.lower():
             rec_class = "recommendation-hold"
         else:
-            rec_class = "text-gray-500" # Default if not parsed
+            rec_class = "text-gray-500" # Default if not parsed or N/A
+
+        # Determine color for P/L
+        pl_color_class = "text-gray-600"
+        try:
+            pl_value = float(unrealized_pl_percent.replace('%',''))
+            if pl_value > 0:
+                pl_color_class = "text-green-600"
+            elif pl_value < 0:
+                pl_color_class = "text-red-600"
+        except ValueError:
+            pass # Keep gray if N/A or not a number
+
 
         html_content += f"""
             <div class="card">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-2">{ticker}</h2>
                 <div class="mb-4 text-lg">
                     <p><span class="font-medium">Current Price:</span> ${current_price:.2f}</p>
-                    <p><span class="font-medium">Unrealized P/L:</span> <span class="{'text-green-600' if float(unrealized_pl_percent.replace('%','')) > 0 else 'text-red-600' if float(unrealized_pl_percent.replace('%','')) < 0 else 'text-gray-600'}">{unrealized_pl_percent}</span></p>
+                    <p><span class="font-medium">Unrealized P/L:</span> <span class="{pl_color_class}">{unrealized_pl_percent}</span></p>
                     <p><span class="font-medium">Calculated Take Profit:</span> ${calc_targets.get('Suggested Take Profit', 'N/A'):.2f}</p>
                     <p><span class="font-medium">Calculated Stop Loss:</span> ${calc_targets.get('Suggested Stop Loss', 'N/A'):.2f}</p>
                 </div>
@@ -360,11 +405,11 @@ def main():
             news_info = get_news_sentiment(ticker)
             
             llm_analysis = analyze_stock_with_llm(
-                ticker, 
-                row_series, 
-                current_price, 
-                historical_data, 
-                news_info, 
+                ticker,
+                row_series,
+                current_price,
+                historical_data,
+                news_info,
                 tech_indicators_info,
                 calculated_targets
             )
@@ -374,13 +419,12 @@ def main():
             'Current Price': current_price if current_price is not None else "N/A",
             'Unrealized P/L (%)': f"{((current_price - row_series['Average_Price']) / row_series['Average_Price'] * 100):.2f}%" if current_price is not None else "N/A",
             'Calculated Targets': calculated_targets,
-            'LLM Analysis': llm_analysis
+            'LLM Analysis': llm_analysis # Raw LLM analysis will be parsed in HTML generation
         })
 
     print("\nGenerating HTML dashboard...")
     html_dashboard_content = generate_html_dashboard(results)
 
-    # Create the output directory if it doesn't exist
     os.makedirs(DASHBOARD_OUTPUT_DIR, exist_ok=True)
     dashboard_file_path = os.path.join(DASHBOARD_OUTPUT_DIR, 'index.html')
 
